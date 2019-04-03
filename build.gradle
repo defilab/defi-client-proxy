@@ -1,0 +1,52 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "io.spring.gradle:dependency-management-plugin:1.0.3.RELEASE"
+    }
+}
+
+plugins {
+    id 'java'
+    id 'eclipse'
+    id 'idea'
+}
+
+repositories {
+    jcenter()
+    maven { url 'https://jitpack.io' }
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+test {
+    // useTestNG()
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-Xlint:unchecked' << '-Xlint:deprecation'
+}
+
+group = 'com.defilab.client-proxy'
+version = '0.0.1-SNAPSHOT'
+
+dependencies {
+
+    compile 'org.apache.httpcomponents:httpclient:4.5.3'
+    
+    compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.26'
+    
+    compile "com.sparkjava:spark-core:2.7.2"
+ 
+    compile files('libs/defi-java-sdk-0.0.1.jar')   
+}
+
+jar {
+  from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+  exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
+  manifest {
+    attributes 'Main-Class': 'com.defilab.ClientProxy.Server'
+  }
+}
