@@ -20,8 +20,6 @@ public class Server {
     @SuppressWarnings("unchecked")
     private static Map<String, String> appCredentials = (Map<String, String>) JSON.parse(Utils.getEnvOrDefault("APP_CREDENTIALS", "{}"));
     
-    private static Map<String, DefiClient> defiClients = new HashMap<>();
-    
     private static Route serveHealthCheck = (Request request, Response reponse) -> {
         return "OK";
     };
@@ -65,7 +63,12 @@ public class Server {
             haltWithError(400, "Invalid JSON");
         }
         String dataSpec = (String) params.getOrDefault("data_spec", "");
-        String qualifiers = (String) params.getOrDefault("qualifiers", "");
+        String qualifiers = null;
+        try {
+            qualifiers = (String) params.getOrDefault("qualifiers", "");
+        } catch (Exception ex) {
+            haltWithError(400, "qualifiers is not string");
+        }
         Double price = Double.valueOf(params.getOrDefault("price", -1).toString());
         Integer timeout = Integer.valueOf(params.getOrDefault("timeout", 5).toString());
         String targetAddress = params.getOrDefault("target_address", "").toString();
@@ -75,19 +78,17 @@ public class Server {
         }
         
         String offerId = UUID.randomUUID().toString();
+	DefiClient defiClient = (DefiClient) Utils.getDefiEntity(appId, "client");
         if (targetAddress != null && !targetAddress.isEmpty()) {
-            Map<String, Object> dataResp = defiClients.get(appId).getData(dataSpec, qualifiers, price, targetAddress, offerId, timeout);
+            Map<String, Object> dataResp = defiClient.getData(dataSpec, qualifiers, price, targetAddress, offerId, timeout);
             return JSON.toJSONString(dataResp);
         } else {
-            Map<String, Map<String, Object>> dataResp = defiClients.get(appId).getData(dataSpec, qualifiers, price);
+            Map<String, Map<String, Object>> dataResp = defiClient.getData(dataSpec, qualifiers, price);
             return JSON.toJSONString(dataResp);
         }
     };
     
     public static void main(String[] args) throws Exception {
-        for (String accountName : appCredentials.keySet()) {
-            defiClients.put(accountName, (DefiClient) Utils.getDefiEntity(accountName, "client"));
-        }
         Spark.threadPool(Integer.valueOf(Utils.getEnvOrDefault("THREADPOOL_SIZE", "36")));
         Spark.before("/query", verifyRequest);
         Spark.post("/query", serveQuery);
